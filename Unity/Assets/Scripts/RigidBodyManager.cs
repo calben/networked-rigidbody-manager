@@ -13,6 +13,7 @@ public class RigidBodyManager : MonoBehaviour
     public bool show_debug_messages;
     public bool show_estimated_latency;
     public bool color_synced_objects;
+    public bool color_player_prioritized_objects;
     public SyncHandler sync_handler;
 
     public bool prioritize_by_player;
@@ -25,7 +26,7 @@ public class RigidBodyManager : MonoBehaviour
     float last_sync_time;
     float last_all_sync_time;
     Color color_for_sync_round;
-    Color color_for_priority = Color.yellow;
+    Color colorPriority = Color.yellow;
 
     public void SetTrackedObject()
     {
@@ -44,6 +45,7 @@ public class RigidBodyManager : MonoBehaviour
     {
         foreach (NetworkView n in GetComponents<NetworkView>())
             n.observed = this;
+        player_prioritized_objects = new List<GameObject>();
     }
 
     /// <summary>
@@ -71,12 +73,36 @@ public class RigidBodyManager : MonoBehaviour
         }
     }
 
-    void GetPlayerPriorityObject()
+    void SetPlayerPriorityObjects()
     {
-
+        player_prioritized_objects.Clear();
+        foreach(GameObject player in GameObject.FindGameObjectsWithTag("Player"))
+        {
+            Vector3 player_position = player.transform.position;
+            foreach(GameObject tracked in tracked_objects)
+            {
+                if(Vector3.Distance(player_position, tracked.transform.position) < this.player_distance)
+                {
+                    player_prioritized_objects.Add(tracked);
+                }
+            }
+        }
     }
 
-
+    void FixedUpdate()
+    {
+        if(prioritize_by_player)
+        {
+            SetPlayerPriorityObjects();
+            if(color_player_prioritized_objects)
+            {
+                foreach(GameObject prioritised in this.player_prioritized_objects)
+                {
+                    prioritised.renderer.material.color = this.colorPriority;
+                }
+            }
+        }
+    }
 
     void OnSerializeNetworkView(BitStream stream, NetworkMessageInfo info)
     {
