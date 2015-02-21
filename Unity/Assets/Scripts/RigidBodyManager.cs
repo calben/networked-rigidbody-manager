@@ -3,10 +3,11 @@ using System.Collections.Generic;
 
 public enum SyncHandler { snap, interpolate };
 
-public class ObjectManager : MonoBehaviour
+public class RigidBodyManager : MonoBehaviour
 {
 
     public List<GameObject> tracked_objects;
+
     public int layer;
     public bool show_debug_messages;
     public bool show_estimated_latency;
@@ -19,21 +20,25 @@ public class ObjectManager : MonoBehaviour
 
     float last_sync_time;
     float last_all_sync_time;
+    Color color_for_sync_round;
 
-    // Use this for initialization
-    void Start()
+    public void SetTrackedObject()
     {
-        foreach (NetworkView n in GetComponents<NetworkView>())
-            n.observed = this;
         tracked_objects = new List<GameObject>();
         foreach (GameObject obj in FindObjectsOfType<GameObject>())
         {
             if (obj.layer == layer)
-            {
                 tracked_objects.Add(obj);
-            }
         }
-        Debug.Log("Tracking " + tracked_objects.Count + " objects for automated networking.");
+        if (show_debug_messages)
+            Debug.Log("Tracking " + tracked_objects.Count + " objects for automated networking.");
+    }
+
+    // Use this for initialization
+    void Awake()
+    {
+        foreach (NetworkView n in GetComponents<NetworkView>())
+            n.observed = this;
     }
 
     /// <summary>
@@ -55,12 +60,24 @@ public class ObjectManager : MonoBehaviour
                 obj.rigidbody.angularVelocity = angular_velocity;
                 break;
         }
+        if(color_synced_objects)
+        {
+            obj.renderer.material.color = color_for_sync_round;
+        }
     }
 
     void OnSerializeNetworkView(BitStream stream, NetworkMessageInfo info)
     {
-        Debug.Log(last_sync_time);
-        Debug.Log(Time.time);
+        if (color_synced_objects)
+        {
+            color_for_sync_round = new Color(Random.value, Random.value, Random.value, 1.0f);
+        }
+        if (show_debug_messages)
+        {
+            Debug.Log("Last sync time: " + last_sync_time);
+            Debug.Log("Current time: " + Time.time);
+        }
+
         if (Time.time - last_sync_time > time_between_sync_per_active)
         {
             Debug.Log("Syncing set.");
