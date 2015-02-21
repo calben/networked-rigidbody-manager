@@ -11,16 +11,12 @@ public class MakeMap : MonoBehaviour
     public string layer;
     public Color cubecolor;
 
-    void Start()
+    public void PlaceCubes()
     {
-        PlaceCubes();
-    }
-
-    void PlaceCubes()
-    {
+        cubecolor = new Color(Random.value, Random.value, Random.value, 1.0f);
         for (int i = 0; i < numberOfCubes; i++)
         {
-            GameObject c = (GameObject) Instantiate(cube, GeneratedPosition(), Quaternion.identity);
+            GameObject c = (GameObject) Network.Instantiate(cube, GeneratedPosition(), Quaternion.identity, 1);
             c.renderer.material.color = cubecolor;
             c.layer = LayerMask.NameToLayer(layer);
         }

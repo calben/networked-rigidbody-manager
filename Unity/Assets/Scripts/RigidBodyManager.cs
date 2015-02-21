@@ -122,7 +122,6 @@ public class RigidBodyManager : MonoBehaviour
             last_sync_time = Time.time;
             foreach (GameObject obj in tracked_objects)
             {
-                //if (obj.GetComponent<InterpolatedPropertySet>().hasMovedBeyondThreshold() || true)
                 {
                     Debug.Log("Syncing movement data for " + obj.name);
                     if (stream.isWriting)
