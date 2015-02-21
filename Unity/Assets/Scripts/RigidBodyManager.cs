@@ -7,12 +7,16 @@ public class RigidBodyManager : MonoBehaviour
 {
 
     public List<GameObject> tracked_objects;
+    List<GameObject> player_prioritized_objects;
 
     public int layer;
     public bool show_debug_messages;
     public bool show_estimated_latency;
     public bool color_synced_objects;
     public SyncHandler sync_handler;
+
+    public bool prioritize_by_player;
+    public float player_distance;
 
     float time_between_sync_per_active = 0.1f;
     float time_between_sync_per_passive = 1.0f;
@@ -21,6 +25,7 @@ public class RigidBodyManager : MonoBehaviour
     float last_sync_time;
     float last_all_sync_time;
     Color color_for_sync_round;
+    Color color_for_priority = Color.yellow;
 
     public void SetTrackedObject()
     {
@@ -65,6 +70,13 @@ public class RigidBodyManager : MonoBehaviour
             obj.renderer.material.color = color_for_sync_round;
         }
     }
+
+    void GetPlayerPriorityObject()
+    {
+
+    }
+
+
 
     void OnSerializeNetworkView(BitStream stream, NetworkMessageInfo info)
     {
