@@ -1,35 +1,39 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
+public enum SyncHandler { snap, interpolate };
+
 public class ObjectManager : MonoBehaviour
 {
 
-    public List<GameObject> trackedObjects;
+    public List<GameObject> tracked_objects;
     public int layer;
-    public bool showDebugMessage;
-    public bool colorSyncedObjects;
+    public bool show_debug_messages;
+    public bool show_estimated_latency;
+    public bool color_synced_objects;
+    public SyncHandler sync_handler;
 
+    float time_between_sync_per_active = 0.1f;
+    float time_between_sync_per_passive = 1.0f;
+    float time_maximum_unsynced = 5.0f;
 
-    float timeBetweenSync = 0.1f;
-    float timeBetweenAllSync = 1.0f;
-
-    float lastSyncTime;
-    float lastAllSyncTime;
+    float last_sync_time;
+    float last_all_sync_time;
 
     // Use this for initialization
     void Start()
     {
         foreach (NetworkView n in GetComponents<NetworkView>())
             n.observed = this;
-        trackedObjects = new List<GameObject>();
+        tracked_objects = new List<GameObject>();
         foreach (GameObject obj in FindObjectsOfType<GameObject>())
         {
             if (obj.layer == layer)
             {
-                trackedObjects.Add(obj);
+                tracked_objects.Add(obj);
             }
         }
-        Debug.Log("Tracking " + trackedObjects.Count + " objects for automated networking.");
+        Debug.Log("Tracking " + tracked_objects.Count + " objects for automated networking.");
     }
 
     /// <summary>
@@ -38,22 +42,30 @@ public class ObjectManager : MonoBehaviour
     Vector3 pos;
     Quaternion rot;
     Vector3 velocity;
-    Vector3 angularVelocity;
-    
-    void SyncObject()
-    {
+    Vector3 angular_velocity;
 
+    void SyncObject(GameObject obj)
+    {
+        switch (sync_handler)
+        {
+            case SyncHandler.snap:
+                obj.transform.position = pos;
+                obj.rigidbody.velocity = velocity;
+                obj.rigidbody.rotation = rot;
+                obj.rigidbody.angularVelocity = angular_velocity;
+                break;
+        }
     }
 
     void OnSerializeNetworkView(BitStream stream, NetworkMessageInfo info)
     {
-        Debug.Log(lastSyncTime);
+        Debug.Log(last_sync_time);
         Debug.Log(Time.time);
-        if (Time.time - lastSyncTime > timeBetweenSync)
+        if (Time.time - last_sync_time > time_between_sync_per_active)
         {
             Debug.Log("Syncing set.");
-            lastSyncTime = Time.time;
-            foreach (GameObject obj in trackedObjects)
+            last_sync_time = Time.time;
+            foreach (GameObject obj in tracked_objects)
             {
                 //if (obj.GetComponent<InterpolatedPropertySet>().hasMovedBeyondThreshold() || true)
                 {
@@ -63,27 +75,20 @@ public class ObjectManager : MonoBehaviour
                         pos = obj.rigidbody.position;
                         rot = obj.rigidbody.rotation;
                         velocity = obj.rigidbody.velocity;
-                        angularVelocity = obj.rigidbody.angularVelocity;
+                        angular_velocity = obj.rigidbody.angularVelocity;
 
                         stream.Serialize(ref pos);
                         stream.Serialize(ref velocity);
                         stream.Serialize(ref rot);
-                        stream.Serialize(ref angularVelocity);
+                        stream.Serialize(ref angular_velocity);
                     }
                     else
                     {
-                        Vector3 pos = Vector3.zero;
-                        Vector3 velocity = Vector3.zero;
-                        Quaternion rot = Quaternion.identity;
-                        Vector3 angularVelocity = Vector3.zero;
                         stream.Serialize(ref pos);
                         stream.Serialize(ref velocity);
                         stream.Serialize(ref rot);
-                        stream.Serialize(ref angularVelocity);
-                        obj.transform.position = pos;
-                        obj.rigidbody.velocity = velocity;
-                        obj.rigidbody.rotation = rot;
-                        obj.rigidbody.angularVelocity = angularVelocity;
+                        stream.Serialize(ref angular_velocity);
+                        SyncObject(obj);
                     }
                 }
             }
