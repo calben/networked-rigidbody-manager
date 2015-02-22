@@ -50,6 +50,8 @@ public class DeftNetwork : MonoBehaviour
 
   void OnServerInitialized()
   {
+      GameObject.Find("MapMaker").GetComponent<MakeMap>().PlaceCubes();
+      GameObject.Find("RigidBodyManager").GetComponent<RigidBodyManager>().ResetTrackedObjects();
   }
 
   void FixedUpdate()
@@ -77,7 +79,7 @@ public class DeftNetwork : MonoBehaviour
 
   void OnConnectedToServer()
   {
-      GameObject.Find("MapMaker").GetComponent<MakeMap>().PlaceCubes();
+      GameObject.Find("RigidBodyManager").GetComponent<RigidBodyManager>().ResetTrackedObjects();
   }
 
 }

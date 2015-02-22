@@ -13,15 +13,13 @@ public class MakeMap : MonoBehaviour
 
     public void PlaceCubes()
     {
-        cubecolor = new Color(Random.value, Random.value, Random.value, 1.0f);
         for (int i = 0; i < numberOfCubes; i++)
         {
-            GameObject c = (GameObject) Network.Instantiate(cube, GeneratedPosition(), Quaternion.identity, 1);
-            c.renderer.material.color = cubecolor;
+            GameObject c = (GameObject) Instantiate(cube, GeneratedPosition(), Quaternion.identity);
             c.layer = LayerMask.NameToLayer(layer);
         }
-        GameObject.Find("RigidBodyManager").GetComponent<RigidBodyManager>().SetTrackedObject();
     }
+
     Vector3 GeneratedPosition()
     {
         int x, y, z;
@@ -29,6 +27,15 @@ public class MakeMap : MonoBehaviour
         y = UnityEngine.Random.Range(min, max);
         z = UnityEngine.Random.Range(min, max);
         return new Vector3(x, y, z);
+    }
+
+    [RPC]
+    public void SyncCubeColor()
+    {
+        foreach (GameObject obj in GameObject.Find("RigidBodyManager").GetComponent<RigidBodyManager>().TrackedObject)
+        {
+            obj.renderer.material.color = cubecolor;
+        }
     }
 
 }
