@@ -32,7 +32,7 @@ public class MakeMap : MonoBehaviour
     [RPC]
     public void SyncCubeColor()
     {
-        foreach (GameObject obj in GameObject.Find("RigidBodyManager").GetComponent<RigidBodyManager>().trackedObjects)
+        foreach (GameObject obj in GameObject.Find("RigidBodyManager").GetComponent<RigidBodyManager>().objectsToSync)
         {
             obj.renderer.material.color = cubecolor;
         }

@@ -6,8 +6,9 @@ public enum SyncHandler { snap, simplesmoothing };
 public class RigidBodyManager : MonoBehaviour
 {
 
-    public List<GameObject> trackedObjects;
-    public List<GameObject> playerPrioritizedObjects;
+    public HashSet<GameObject> allTrackedObjects;
+    public HashSet<GameObject> objectsToSync;
+    public HashSet<GameObject> objectsToPrioritySync;
 
     public int layer;
     public bool isShowingDebug;
@@ -17,7 +18,8 @@ public class RigidBodyManager : MonoBehaviour
     public SyncHandler syncHandler;
 
     public bool prioritizeByPlayerDistance;
-    public float playerProximity;
+    public float playerPriorityProximity;
+    public float playerDontSyncProximity; // YOU NEED THIS FOR PROPERTY RIGIDBODY FUNCTION
 
     public float timeBetweenSyncHighPriority = 0.1f;
     public float timeBetweenSyncLowPriority = 1.0f;
@@ -31,20 +33,23 @@ public class RigidBodyManager : MonoBehaviour
 
     public void ResetTrackedObjects()
     {
-        trackedObjects = new List<GameObject>();
+
+        objectsToSync = new HashSet<GameObject>();
+        allTrackedObjects = new HashSet<GameObject>();
+        objectsToPrioritySync = new HashSet<GameObject>();
         foreach (GameObject obj in FindObjectsOfType<GameObject>())
         {
             if (obj.layer == layer)
             {
-                trackedObjects.Add(obj);
-                if(isColoringPerSync)
+                allTrackedObjects.Add(obj);
+                if (isColoringPerSync)
                 {
                     obj.renderer.material.color = Color.green;
                 }
             }
         }
         if (isShowingDebug)
-            Debug.Log("Tracking " + trackedObjects.Count + " objects for automated networking.");
+            Debug.Log("Tracking " + allTrackedObjects.Count + " objects for automated networking.");
     }
 
     [RPC]
@@ -53,14 +58,14 @@ public class RigidBodyManager : MonoBehaviour
         if (Network.isServer)
         {
             this.ResetTrackedObjects();
-            foreach (GameObject obj in this.trackedObjects)
+            foreach (GameObject obj in this.objectsToSync)
             {
 
             }
         }
-        if(Network.isClient)
+        if (Network.isClient)
         {
-            this.trackedObjects.Clear();
+            this.objectsToSync.Clear();
 
         }
     }
@@ -70,7 +75,6 @@ public class RigidBodyManager : MonoBehaviour
     {
         foreach (NetworkView n in GetComponents<NetworkView>())
             n.observed = this;
-        playerPrioritizedObjects = new List<GameObject>();
     }
 
     /// <summary>
@@ -83,6 +87,10 @@ public class RigidBodyManager : MonoBehaviour
 
     void SyncObject(GameObject obj)
     {
+        if (isShowingDebug)
+        {
+            Debug.Log("Syncing object: " + obj.GetInstanceID());
+        }
         switch (syncHandler)
         {
             case SyncHandler.snap:
@@ -106,15 +114,22 @@ public class RigidBodyManager : MonoBehaviour
 
     void SetPlayerPriorityObjects()
     {
-        playerPrioritizedObjects.Clear();
+        objectsToPrioritySync.Clear();
         foreach (GameObject player in GameObject.FindGameObjectsWithTag("Player"))
         {
             Vector3 player_position = player.transform.position;
-            foreach (GameObject tracked in trackedObjects)
+            foreach (GameObject tracked in objectsToSync)
             {
-                if (Vector3.Distance(player_position, tracked.transform.position) < this.playerProximity)
+                if (Vector3.Distance(player_position, tracked.transform.position) < this.playerPriorityProximity)
                 {
-                    playerPrioritizedObjects.Add(tracked);
+                    objectsToSync.Remove(tracked);
+                } else if (Vector3.Distance(player_position, tracked.transform.position) < this.playerPriorityProximity)
+                {
+                    objectsToPrioritySync.Add(tracked);
+                }
+                else
+                {
+                    objectsToSync.Add(tracked);
                 }
             }
         }
@@ -127,7 +142,7 @@ public class RigidBodyManager : MonoBehaviour
             SetPlayerPriorityObjects();
             if (isColoringByPlayerProximity)
             {
-                foreach (GameObject prioritised in this.playerPrioritizedObjects)
+                foreach (GameObject prioritised in this.objectsToPrioritySync)
                 {
                     prioritised.renderer.material.color = this.prioritizedColor;
                 }
@@ -143,15 +158,15 @@ public class RigidBodyManager : MonoBehaviour
         }
         if (isShowingDebug)
         {
-            Debug.Log("Last sync time: " + timeLastHighPrioritySync);
+            Debug.Log("Last low priority sync time: " + timeLastLowPrioritySync);
             Debug.Log("Current time: " + Time.time);
         }
 
-        if (Time.time - timeLastHighPrioritySync > timeBetweenSyncHighPriority)
+        if (Time.time - timeLastLowPrioritySync > timeBetweenSyncHighPriority)
         {
             Debug.Log("Syncing set.");
             timeLastHighPrioritySync = Time.time;
-            foreach (GameObject obj in trackedObjects)
+            foreach (GameObject obj in objectsToSync)
             {
                 {
                     Debug.Log("Syncing movement data for " + obj.name);
