@@ -136,6 +136,10 @@ public class RigidBodyManager : MonoBehaviour
         }
     }
 
+    void SetSyncRateForNetworkViews()
+    {
+    }
+
     void FixedUpdate()
     {
         if (prioritizeByPlayerDistance)
@@ -148,6 +152,10 @@ public class RigidBodyManager : MonoBehaviour
                     prioritised.renderer.material.color = this.prioritizedColor;
                 }
             }
+        }
+        if (!syncThroughManager)
+        {
+
         }
     }
 

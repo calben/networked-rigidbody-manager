@@ -51,6 +51,7 @@
      <Compile Include="Assets\Scripts\DemoSetup\PlayerBehaviour.cs" />
      <Compile Include="Assets\Scripts\PlayerManager.cs" />
      <Compile Include="Assets\Scripts\RigidBodyManager.cs" />
+     <Compile Include="Assets\Scripts\RigidBodySyncHelper.cs" />
  <Reference Include="UnityEngine.UI">
  <HintPath>C:/Program Files (x86)/Unity/Editor/Data/UnityExtensions/Unity/GUISystem/4.6.2/UnityEngine.UI.dll</HintPath>
  </Reference>
