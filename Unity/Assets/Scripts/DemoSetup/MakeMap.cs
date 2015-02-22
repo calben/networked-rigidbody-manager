@@ -15,7 +15,7 @@ public class MakeMap : MonoBehaviour
     {
         for (int i = 0; i < numberOfCubes; i++)
         {
-            GameObject c = (GameObject) Instantiate(cube, GeneratedPosition(), Quaternion.identity);
+            GameObject c = (GameObject) Network.Instantiate(cube, GeneratedPosition(), Quaternion.identity, 5);
             c.layer = LayerMask.NameToLayer(layer);
         }
     }
@@ -32,7 +32,7 @@ public class MakeMap : MonoBehaviour
     [RPC]
     public void SyncCubeColor()
     {
-        foreach (GameObject obj in GameObject.Find("RigidBodyManager").GetComponent<RigidBodyManager>().TrackedObject)
+        foreach (GameObject obj in GameObject.Find("RigidBodyManager").GetComponent<RigidBodyManager>().trackedObjects)
         {
             obj.renderer.material.color = cubecolor;
         }

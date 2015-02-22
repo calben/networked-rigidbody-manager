@@ -1,13 +1,13 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
-public enum SyncHandler { snap, interpolate };
+public enum SyncHandler { snap, simplesmoothing };
 
 public class RigidBodyManager : MonoBehaviour
 {
 
-    public List<GameObject> TrackedObject;
-    List<GameObject> PlayerPrioritizedObjects;
+    public List<GameObject> trackedObjects;
+    public List<GameObject> playerPrioritizedObjects;
 
     public int layer;
     public bool isShowingDebug;
@@ -31,12 +31,12 @@ public class RigidBodyManager : MonoBehaviour
 
     public void ResetTrackedObjects()
     {
-        TrackedObject = new List<GameObject>();
+        trackedObjects = new List<GameObject>();
         foreach (GameObject obj in FindObjectsOfType<GameObject>())
         {
             if (obj.layer == layer)
             {
-                TrackedObject.Add(obj);
+                trackedObjects.Add(obj);
                 if(isColoringPerSync)
                 {
                     obj.renderer.material.color = Color.green;
@@ -44,7 +44,25 @@ public class RigidBodyManager : MonoBehaviour
             }
         }
         if (isShowingDebug)
-            Debug.Log("Tracking " + TrackedObject.Count + " objects for automated networking.");
+            Debug.Log("Tracking " + trackedObjects.Count + " objects for automated networking.");
+    }
+
+    [RPC]
+    public void ShareTrackedObjectList()
+    {
+        if (Network.isServer)
+        {
+            this.ResetTrackedObjects();
+            foreach (GameObject obj in this.trackedObjects)
+            {
+
+            }
+        }
+        if(Network.isClient)
+        {
+            this.trackedObjects.Clear();
+
+        }
     }
 
     // Use this for initialization
@@ -52,7 +70,7 @@ public class RigidBodyManager : MonoBehaviour
     {
         foreach (NetworkView n in GetComponents<NetworkView>())
             n.observed = this;
-        PlayerPrioritizedObjects = new List<GameObject>();
+        playerPrioritizedObjects = new List<GameObject>();
     }
 
     /// <summary>
@@ -73,6 +91,12 @@ public class RigidBodyManager : MonoBehaviour
                 obj.rigidbody.rotation = rot;
                 obj.rigidbody.angularVelocity = angular_velocity;
                 break;
+            case SyncHandler.simplesmoothing:
+                obj.transform.position = Vector3.Lerp(obj.transform.position, pos, 0.5f);
+                obj.rigidbody.velocity = Vector3.Lerp(obj.rigidbody.velocity, velocity, 0.5f);
+                obj.rigidbody.rotation = Quaternion.Slerp(obj.rigidbody.rotation, rot, 0.5f);
+                obj.rigidbody.angularVelocity = Vector3.Lerp(obj.rigidbody.angularVelocity, angular_velocity, 0.5f);
+                break;
         }
         if (isColoringPerSync)
         {
@@ -82,15 +106,15 @@ public class RigidBodyManager : MonoBehaviour
 
     void SetPlayerPriorityObjects()
     {
-        PlayerPrioritizedObjects.Clear();
+        playerPrioritizedObjects.Clear();
         foreach (GameObject player in GameObject.FindGameObjectsWithTag("Player"))
         {
             Vector3 player_position = player.transform.position;
-            foreach (GameObject tracked in TrackedObject)
+            foreach (GameObject tracked in trackedObjects)
             {
                 if (Vector3.Distance(player_position, tracked.transform.position) < this.playerProximity)
                 {
-                    PlayerPrioritizedObjects.Add(tracked);
+                    playerPrioritizedObjects.Add(tracked);
                 }
             }
         }
@@ -103,7 +127,7 @@ public class RigidBodyManager : MonoBehaviour
             SetPlayerPriorityObjects();
             if (isColoringByPlayerProximity)
             {
-                foreach (GameObject prioritised in this.PlayerPrioritizedObjects)
+                foreach (GameObject prioritised in this.playerPrioritizedObjects)
                 {
                     prioritised.renderer.material.color = this.prioritizedColor;
                 }
@@ -127,7 +151,7 @@ public class RigidBodyManager : MonoBehaviour
         {
             Debug.Log("Syncing set.");
             timeLastHighPrioritySync = Time.time;
-            foreach (GameObject obj in TrackedObject)
+            foreach (GameObject obj in trackedObjects)
             {
                 {
                     Debug.Log("Syncing movement data for " + obj.name);
