@@ -15,6 +15,7 @@ public class RigidBodyManager : MonoBehaviour
     public bool isShowingLatency;
     public bool isColoringPerSync;
     public bool isColoringByPlayerProximity;
+    public bool syncThroughManager;
     public SyncHandler syncHandler;
 
     public bool prioritizeByPlayerDistance;
@@ -152,46 +153,53 @@ public class RigidBodyManager : MonoBehaviour
 
     void OnSerializeNetworkView(BitStream stream, NetworkMessageInfo info)
     {
-        if (isColoringPerSync)
+        if (syncThroughManager)
         {
-            syncedRoundColor = new Color(Random.value, Random.value, Random.value, 1.0f);
-        }
-        if (isShowingDebug)
-        {
-            Debug.Log("Last low priority sync time: " + timeLastLowPrioritySync);
-            Debug.Log("Current time: " + Time.time);
-        }
-
-        if (Time.time - timeLastLowPrioritySync > timeBetweenSyncHighPriority)
-        {
-            Debug.Log("Syncing set.");
-            timeLastHighPrioritySync = Time.time;
-            foreach (GameObject obj in objectsToSync)
+            if (isColoringPerSync)
             {
-                {
-                    Debug.Log("Syncing movement data for " + obj.name);
-                    if (stream.isWriting)
-                    {
-                        pos = obj.rigidbody.position;
-                        rot = obj.rigidbody.rotation;
-                        velocity = obj.rigidbody.velocity;
-                        angular_velocity = obj.rigidbody.angularVelocity;
+                syncedRoundColor = new Color(Random.value, Random.value, Random.value, 1.0f);
+            }
+            if (isShowingDebug)
+            {
+                Debug.Log("Last low priority sync time: " + timeLastLowPrioritySync);
+                Debug.Log("Current time: " + Time.time);
+            }
 
-                        stream.Serialize(ref pos);
-                        stream.Serialize(ref velocity);
-                        stream.Serialize(ref rot);
-                        stream.Serialize(ref angular_velocity);
-                    }
-                    else
+            if (Time.time - timeLastLowPrioritySync > timeBetweenSyncHighPriority)
+            {
+                Debug.Log("Syncing set.");
+                timeLastHighPrioritySync = Time.time;
+                foreach (GameObject obj in objectsToSync)
+                {
                     {
-                        stream.Serialize(ref pos);
-                        stream.Serialize(ref velocity);
-                        stream.Serialize(ref rot);
-                        stream.Serialize(ref angular_velocity);
-                        SyncObject(obj);
+                        Debug.Log("Syncing movement data for " + obj.name);
+                        if (stream.isWriting)
+                        {
+                            pos = obj.rigidbody.position;
+                            rot = obj.rigidbody.rotation;
+                            velocity = obj.rigidbody.velocity;
+                            angular_velocity = obj.rigidbody.angularVelocity;
+
+                            stream.Serialize(ref pos);
+                            stream.Serialize(ref velocity);
+                            stream.Serialize(ref rot);
+                            stream.Serialize(ref angular_velocity);
+                        }
+                        else
+                        {
+                            stream.Serialize(ref pos);
+                            stream.Serialize(ref velocity);
+                            stream.Serialize(ref rot);
+                            stream.Serialize(ref angular_velocity);
+                            SyncObject(obj);
+                        }
                     }
                 }
             }
+        }
+        else
+        {
+
         }
     }
 }
