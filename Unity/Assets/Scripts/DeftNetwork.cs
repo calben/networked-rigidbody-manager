@@ -1,14 +1,13 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+public enum NetworkRole { SEARCHING, HOST, CLIENT }
+
 public class DeftNetwork : MonoBehaviour
 {
   private const string typeName = "DeftNetwork";
-  private const string gameName = "DeftRoom";
+  private const string gameName = "12345648";
 
-  private bool refreshHosts = false;
-  private bool isJoining = false;
-  private bool isHosting = false;
   private HostData[] hostList;
 
   void Start()
