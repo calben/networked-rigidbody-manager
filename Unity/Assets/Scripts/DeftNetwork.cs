@@ -5,10 +5,10 @@ public enum NetworkRole { SEARCHING, HOST, CLIENT }
 
 public class DeftNetwork : MonoBehaviour
 {
-  private const string typeName = "DeftNetwork";
-  private const string gameName = "12345648";
-
-  private HostData[] hostList;
+  const string typeName = "DeftNetwork";
+  const string gameName = "12345648";
+  NetworkRole role;
+  HostData[] hostList;
 
   void Start()
   {
@@ -18,67 +18,54 @@ public class DeftNetwork : MonoBehaviour
   void OnGUI()
   {
     if (!Network.isClient && !Network.isServer)
-      if (isJoining)
+    {
+      if (GUI.Button(new Rect(100, 100, 300, 100), "Start Server"))
       {
-        if (hostList != null)
-          for (int i = 0; i < hostList.Length; i++)
-            if (GUI.Button(new Rect(400, 100 + (110 * i), 300, 100), hostList[i].gameName))
-              JoinServer(hostList[i]);
+        this.role = NetworkRole.HOST;
       }
-      else if (isHosting)
+      if (GUI.Button(new Rect(100, 250, 300, 100), "Refresh Hosts to Join"))
       {
-        HostServer();
+        this.role = NetworkRole.SEARCHING;
+        MasterServer.RequestHostList(typeName);
       }
-      else
-      {
-        if (GUI.Button(new Rect(100, 100, 300, 100), "Start Server"))
-          isHosting = true;
-        if (GUI.Button(new Rect(100, 250, 300, 100), "Refresh Hosts to Join"))
-        {
-          isJoining = true;
-          RefreshHostList();
-        }
-      }
+    }
   }
 
   private void HostServer()
   {
-    Network.InitializeServer(16, 25000, false);
-    MasterServer.RegisterHost(typeName, gameName);
+
   }
 
   void OnServerInitialized()
   {
-      GameObject.Find("MapMaker").GetComponent<MakeMap>().PlaceCubes();
-      GameObject.Find("RigidBodyManager").GetComponent<RigidBodyManager>().ResetTrackedObjects();
+    GameObject.Find("MapMaker").GetComponent<MakeMap>().PlaceCubes();
+    GameObject.Find("RigidBodyManager").GetComponent<RigidBodyManager>().ResetTrackedObjects();
   }
 
   void FixedUpdate()
   {
-    if (refreshHosts && MasterServer.PollHostList().Length > 0)
+    if (!Network.isClient && !Network.isServer)
     {
-      refreshHosts = false;
-      hostList = MasterServer.PollHostList();
+      if (this.role == NetworkRole.HOST)
+      {
+        Network.InitializeServer(16, 25000, false);
+        MasterServer.RegisterHost(typeName, gameName);
+      }
+      if (this.role == NetworkRole.SEARCHING && MasterServer.PollHostList().Length > 0)
+      {
+        hostList = MasterServer.PollHostList();
+        if (hostList != null)
+          for (int i = 0; i < hostList.Length; i++)
+          {
+            Network.Connect(hostList[i]);
+          }
+      }
     }
-  }
-
-  private void RefreshHostList()
-  {
-    if (!refreshHosts)
-    {
-      refreshHosts = true;
-      MasterServer.RequestHostList(typeName);
-    }
-  }
-
-  private void JoinServer(HostData hostData)
-  {
-    Network.Connect(hostData);
   }
 
   void OnConnectedToServer()
   {
-      GameObject.Find("RigidBodyManager").GetComponent<RigidBodyManager>().ResetTrackedObjects();
+    GameObject.Find("RigidBodyManager").GetComponent<RigidBodyManager>().ResetTrackedObjects();
   }
 
 }
