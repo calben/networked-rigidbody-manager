@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
      <Compile Include="Assets\Scripts\DeftNetwork.cs" />
+     <Compile Include="Assets\Scripts\DeftSyncingAlgorithms.cs" />
      <Compile Include="Assets\Scripts\DemoSetup\MakeMap.cs" />
      <Compile Include="Assets\Scripts\DemoSetup\PlayerBehaviour.cs" />
      <Compile Include="Assets\Scripts\PlayerManager.cs" />

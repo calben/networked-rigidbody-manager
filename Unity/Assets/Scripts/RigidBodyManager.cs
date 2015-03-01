@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
-public enum SyncHandler { snap, simplesmoothing };
+public enum SyncHandler { snap, simplesmoothing, firstorder, secondorder, adaptivehigherorder };
 
 public class RigidBodyManager : MonoBehaviour
 {
@@ -20,7 +20,7 @@ public class RigidBodyManager : MonoBehaviour
 
   public bool prioritizeByPlayerDistance;
   public float playerPriorityProximity;
-  public float playerDontSyncProximity; // YOU NEED THIS FOR PROPERTY RIGIDBODY FUNCTION
+  public float playerDontSyncProximity; // YOU NEED THIS FOR PROPER RIGIDBODY FUNCTION
 
   public float timeBetweenSyncHighPriority = 0.1f;
   public float timeBetweenSyncLowPriority = 1.0f;
@@ -68,7 +68,7 @@ public class RigidBodyManager : MonoBehaviour
       this.ResetTrackedObjects();
       foreach (GameObject obj in this.objectsToSync)
       {
-
+        // sync objects
       }
     }
     if (Network.isClient)
@@ -102,16 +102,16 @@ public class RigidBodyManager : MonoBehaviour
     switch (syncHandler)
     {
       case SyncHandler.snap:
-        obj.transform.position = pos;
-        obj.rigidbody.velocity = velocity;
-        obj.rigidbody.rotation = rot;
-        obj.rigidbody.angularVelocity = angular_velocity;
+        SnapSync(obj);
         break;
       case SyncHandler.simplesmoothing:
-        obj.transform.position = Vector3.Lerp(obj.transform.position, pos, 0.5f);
-        obj.rigidbody.velocity = Vector3.Lerp(obj.rigidbody.velocity, velocity, 0.5f);
-        obj.rigidbody.rotation = Quaternion.Slerp(obj.rigidbody.rotation, rot, 0.5f);
-        obj.rigidbody.angularVelocity = Vector3.Lerp(obj.rigidbody.angularVelocity, angular_velocity, 0.5f);
+        FirstOrderSync(obj);
+        break;
+      case SyncHandler.firstorder:
+        FirstOrderSync(obj);
+        break;
+      case SyncHandler.secondorder:
+        SecondOrderSync(obj);
         break;
     }
     if (isColoringPerSync)
@@ -119,6 +119,28 @@ public class RigidBodyManager : MonoBehaviour
       obj.renderer.material.color = syncedRoundColor;
     }
   }
+
+  void SnapSync(GameObject obj)
+  {
+    obj.transform.position = pos;
+    obj.rigidbody.velocity = velocity;
+    obj.rigidbody.rotation = rot;
+    obj.rigidbody.angularVelocity = angular_velocity;
+  }
+
+  void FirstOrderSync(GameObject obj)
+  {
+    obj.transform.position = Vector3.Lerp(obj.transform.position, pos, 0.5f);
+    obj.rigidbody.velocity = Vector3.Lerp(obj.rigidbody.velocity, velocity, 0.5f);
+    obj.rigidbody.rotation = Quaternion.Slerp(obj.rigidbody.rotation, rot, 0.5f);
+    obj.rigidbody.angularVelocity = Vector3.Lerp(obj.rigidbody.angularVelocity, angular_velocity, 0.5f);
+  }
+
+  void SecondOrderSync(GameObject obj)
+  {
+    // TODO
+  }
+
 
   void SetPlayerPriorityObjects()
   {

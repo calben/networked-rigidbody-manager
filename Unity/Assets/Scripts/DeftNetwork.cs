@@ -8,7 +8,6 @@ public class DeftNetwork : MonoBehaviour
   const string typeName = "DeftNetwork";
   const string gameName = "12345648";
   NetworkRole role;
-  HostData[] hostList;
 
   void Start()
   {
@@ -61,7 +60,7 @@ public class DeftNetwork : MonoBehaviour
       }
       if (this.role == NetworkRole.SEARCHING && MasterServer.PollHostList().Length > 0)
       {
-        hostList = MasterServer.PollHostList();
+        HostData[] hostList = MasterServer.PollHostList();
         if (hostList != null)
           for (int i = 0; i < hostList.Length; i++)
           {
