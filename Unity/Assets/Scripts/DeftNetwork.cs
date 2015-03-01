@@ -13,6 +13,14 @@ public class DeftNetwork : MonoBehaviour
   void Start()
   {
     Application.runInBackground = true;
+    if (System.Environment.CommandLine.Contains("host"))
+    {
+      this.role = NetworkRole.HOST;
+    }
+    else if (System.Environment.CommandLine.Contains("client"))
+    {
+      this.role = NetworkRole.SEARCHING;
+    }
   }
 
   void OnGUI()
