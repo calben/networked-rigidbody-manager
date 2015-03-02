@@ -3,6 +3,15 @@ using System.Collections.Generic;
 
 public enum SyncHandler { snap, simplesmoothing, firstorder, secondorder, adaptivehigherorder };
 
+public struct DeftRigidBodyState
+{
+  internal double timestamp;
+  internal Vector3 pos;
+  internal Vector3 velocity;
+  internal Quaternion rot;
+  internal Vector3 angularVelocity;
+}
+
 public class RigidBodyManager : MonoBehaviour
 {
 
@@ -111,7 +120,7 @@ public class RigidBodyManager : MonoBehaviour
         FirstOrderSync(obj);
         break;
       case SyncHandler.secondorder:
-        SecondOrderSync(obj);
+        //SecondOrderSync(obj);
         break;
     }
     if (isColoringPerSync)
@@ -136,9 +145,14 @@ public class RigidBodyManager : MonoBehaviour
     obj.rigidbody.angularVelocity = Vector3.Lerp(obj.rigidbody.angularVelocity, angular_velocity, 0.5f);
   }
 
-  void SecondOrderSync(GameObject obj)
+  void SecondOrderSync(Queue<DeftRigidBodyState> states)
   {
-    // TODO
+    // assuming states in correct order
+    // assuming timesteps approximately equal
+    // assuming order with 0..n being most recent to least recent
+    foreach (DeftRigidBodyState state in states)
+    {
+    }
   }
 
 
