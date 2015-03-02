@@ -156,6 +156,7 @@ public class RigidBodyManager : MonoBehaviour
     	d2 = states[1].timestamp - states[2].timestamp;
     	update = new DeftRigidBodyState ();
     	update.pos = 2*d1^2/d2/(d1+d2)*states[3].pos - (2*d1/d2+1)*states[1].pos + (2^d1/(d1+d2)+1)*states[0].pos;
+    	update.velocity = 1/(2*d1)*states[1].pos - 2/d1*states[0].pos + 3/(2*d1)*update.pos;
     	update.timestamp = states[0].timestamp + d1;
     	states.push(update);
     }
