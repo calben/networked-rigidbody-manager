@@ -145,20 +145,26 @@ public class RigidBodyManager : MonoBehaviour
     obj.rigidbody.angularVelocity = Vector3.Lerp(obj.rigidbody.angularVelocity, angular_velocity, 0.5f);
   }
 
-  void SecondOrderSync(Queue<DeftRigidBodyState> states)
+  void PHBRSync(DeftRigidBodyState[] states)
   {
     // assuming states in correct order
     // assuming timesteps approximately equal
     // assuming order with 0..n being most recent to least recent
     while (states[0].timestamp < Time.time)
     {
-	    d1 = states[0].timestamp - states[1].timestamp;
-    	d2 = states[1].timestamp - states[2].timestamp;
-    	update = new DeftRigidBodyState ();
-    	update.pos = 2*d1^2/d2/(d1+d2)*states[3].pos - (2*d1/d2+1)*states[1].pos + (2^d1/(d1+d2)+1)*states[0].pos;
-    	update.velocity = 1/(2*d1)*states[1].pos - 2/d1*states[0].pos + 3/(2*d1)*update.pos;
-    	update.timestamp = states[0].timestamp + d1;
-    	states.push(update);
+      float d1 = (float)(states[0].timestamp - states[1].timestamp);
+      float d2 = (float)(states[1].timestamp - states[2].timestamp);
+      DeftRigidBodyState update = new DeftRigidBodyState();
+      float tmp1 = 2 * d1 * d1 / d2 / (d1 + d2);
+      float tmp2 = 2 * d1 / d2 + 1;
+      float tmp3 = 2 * d1 / (d1 + d2) + 1;
+      update.pos = tmp1 * states[3].pos - tmp2 * states[1].pos + tmp3 * states[0].pos;
+      update.velocity = 1 / (2 * d1) * states[1].pos - 2 / d1 * states[0].pos + 3 / (2 * d1) * update.pos;
+      update.timestamp = states[0].timestamp + d1;
+      for (int i = states.Length - 1; i >= 1; i--)
+      {
+        states[i] = states[i - 1];
+      }
     }
   }
 
