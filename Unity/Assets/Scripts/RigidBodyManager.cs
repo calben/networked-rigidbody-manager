@@ -15,13 +15,14 @@ public struct DeftRigidBodyState
 public class RigidBodyManager : MonoBehaviour
 {
 
+  public Dictionary<int, GameObject> objectDictionary;
   public Queue<GameObject> objectsToSync;
   public Dictionary<GameObject, DeftRigidBodyState> objecToState;
   public HashSet<GameObject> allTrackedObjects;
 
   // syncs in order of priority
   // priority suggests how many to sync per syncing set
-  public Dictionary<int, HashSet<GameObject>> objectsByPriority;
+  public Dictionary<int, Queue<GameObject>> objectsByPriority;
 
   public int trackingLayer;
   public bool isShowingDebug;
@@ -50,12 +51,13 @@ public class RigidBodyManager : MonoBehaviour
 
   void Start()
   {
+    objectDictionary = new Dictionary<int, GameObject>();
     objectsToSync = new Queue<GameObject>();
     allTrackedObjects = new HashSet<GameObject>();
-    objectsByPriority = new Dictionary<int, HashSet<GameObject>>();
+    objectsByPriority = new Dictionary<int, Queue<GameObject>>();
     for (int i = 1; i < 11; i++)
     {
-      objectsByPriority[i] = new HashSet<GameObject>();
+      objectsByPriority[i] = new Queue<GameObject>();
     }
   }
 
@@ -64,13 +66,14 @@ public class RigidBodyManager : MonoBehaviour
     allTrackedObjects.Clear();
     for (int i = 1; i < 11; i++)
     {
-      objectsByPriority[i] = new HashSet<GameObject>();
+      objectsByPriority[i] = new Queue<GameObject>();
     }
     foreach (GameObject obj in FindObjectsOfType<GameObject>())
     {
       if (obj.layer == trackingLayer)
       {
         allTrackedObjects.Add(obj);
+        objectDictionary[obj.GetInstanceID()] = obj;
       }
     }
     if (isShowingDebug)
@@ -109,6 +112,7 @@ public class RigidBodyManager : MonoBehaviour
   Quaternion rot;
   Vector3 velocity;
   Vector3 angular_velocity;
+  int id;
 
   void SyncObject(GameObject obj)
   {
@@ -193,7 +197,7 @@ public class RigidBodyManager : MonoBehaviour
         }
         else if (distance < this.playerPriorityProximity)
         {
-          objectsByPriority[this.playerPriority].Add(tracked);
+          objectsByPriority[this.playerPriority].Enqueue(tracked);
         }
         else
         {
@@ -201,10 +205,6 @@ public class RigidBodyManager : MonoBehaviour
         }
       }
     }
-  }
-
-  void SetSyncRateForNetworkViews()
-  {
   }
 
   void FixedUpdate()
@@ -215,9 +215,24 @@ public class RigidBodyManager : MonoBehaviour
     }
   }
 
+  public void BuildSyncQueue()
+  {
+    for(int i = 1; i < 11; i++)
+    {
+      if (this.objectsByPriority[i].Count > 0)
+      {
+        int j = 0;
+        while (j < i && this.objectsByPriority[i].Count > 0)
+        {
+          this.objectsToSync.Enqueue(this.objectsByPriority[i].Dequeue());
+        }
+      }
+    }
+  }
+
   void OnSerializeNetworkView(BitStream stream, NetworkMessageInfo info)
   {
-    if(this.useVisualizer)
+    if (this.useVisualizer)
     {
       // note using the visualizer will probably hugely slow down your simulation
       this.gameObject.GetComponent<RigidBodyManagerVisualizer>().ShowVisualization();
@@ -228,34 +243,36 @@ public class RigidBodyManager : MonoBehaviour
       Debug.Log("Current time: " + Time.time);
     }
 
-    if (Time.time - timeLastLowPrioritySync > timeBetweenSyncHighPriority)
+    if (this.objectsToSync.Count > 0)
     {
-      Debug.Log("Syncing set.");
       timeLastHighPrioritySync = Time.time;
-      foreach (GameObject obj in objectsToSync)
+      GameObject obj = this.objectsToSync.Dequeue();
       {
+        if (stream.isWriting)
         {
-          Debug.Log("Syncing movement data for " + obj.name);
-          if (stream.isWriting)
+          pos = obj.rigidbody.position;
+          rot = obj.rigidbody.rotation;
+          velocity = obj.rigidbody.velocity;
+          angular_velocity = obj.rigidbody.angularVelocity;
+          id = obj.GetInstanceID();
+          stream.Serialize(ref pos);
+          stream.Serialize(ref velocity);
+          stream.Serialize(ref rot);
+          stream.Serialize(ref angular_velocity);
+          stream.Serialize(ref id);
+        }
+        else
+        {
+          stream.Serialize(ref pos);
+          stream.Serialize(ref velocity);
+          stream.Serialize(ref rot);
+          stream.Serialize(ref angular_velocity);
+          stream.Serialize(ref id);
+          if(isShowingDebug)
           {
-            pos = obj.rigidbody.position;
-            rot = obj.rigidbody.rotation;
-            velocity = obj.rigidbody.velocity;
-            angular_velocity = obj.rigidbody.angularVelocity;
-
-            stream.Serialize(ref pos);
-            stream.Serialize(ref velocity);
-            stream.Serialize(ref rot);
-            stream.Serialize(ref angular_velocity);
+            Debug.Log("Received " + id);
           }
-          else
-          {
-            stream.Serialize(ref pos);
-            stream.Serialize(ref velocity);
-            stream.Serialize(ref rot);
-            stream.Serialize(ref angular_velocity);
-            SyncObject(obj);
-          }
+          SyncObject(objectDictionary[id]);
         }
       }
     }

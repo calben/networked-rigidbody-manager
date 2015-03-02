@@ -46,7 +46,7 @@ public class RigidBodyNetworkSetup : MonoBehaviour
   void OnServerInitialized()
   {
     GameObject.Find("MapMaker").GetComponent<MakeMap>().PlaceCubes();
-    GameObject.Find("RigidBodyManager").GetComponent<RigidBodyManager>().ResetTrackedObjects();
+    this.gameObject.GetComponent<RigidBodyManager>().ResetTrackedObjects();
   }
 
   void FixedUpdate()
@@ -72,7 +72,7 @@ public class RigidBodyNetworkSetup : MonoBehaviour
 
   void OnConnectedToServer()
   {
-    GameObject.Find("RigidBodyManager").GetComponent<RigidBodyManager>().ResetTrackedObjects();
+    this.gameObject.GetComponent<RigidBodyManager>().ResetTrackedObjects();
   }
 
 }
