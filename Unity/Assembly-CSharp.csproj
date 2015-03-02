@@ -49,6 +49,7 @@
      <Compile Include="Assets\Scripts\DemoSetup\MakeMap.cs" />
      <Compile Include="Assets\Scripts\DemoSetup\PlayerBehaviour.cs" />
      <Compile Include="Assets\Scripts\RigidBodyManager.cs" />
+     <Compile Include="Assets\Scripts\RigidBodyManagerVisualizer.cs" />
      <Compile Include="Assets\Scripts\RigidBodyNetworkSetup.cs" />
  <Reference Include="UnityEngine.UI">
  <HintPath>C:/Program Files (x86)/Unity/Editor/Data/UnityExtensions/Unity/GUISystem/4.6.3/UnityEngine.UI.dll</HintPath>

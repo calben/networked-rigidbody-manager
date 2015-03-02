@@ -5,19 +5,20 @@ public enum SyncHandler { snap, simplesmoothing, firstorder, secondorder, adapti
 
 public struct DeftRigidBodyState
 {
-  internal double timestamp;
-  internal Vector3 pos;
-  internal Vector3 velocity;
-  internal Quaternion rot;
-  internal Vector3 angularVelocity;
+  double timestamp;
+  Vector3 pos;
+  Vector3 velocity;
+  Quaternion rot;
+  Vector3 angularVelocity;
 }
 
 public class RigidBodyManager : MonoBehaviour
 {
 
+  public Queue<GameObject> objectsToSync;
+  public Dictionary<GameObject, DeftRigidBodyState> objecToState;
   public HashSet<GameObject> allTrackedObjects;
-  public HashSet<GameObject> objectsToSync;
-  public HashSet<GameObject> objectsToPrioritySync;
+  public Dictionary<int, HashSet<GameObject>> objectsInPriority;
 
   public int layer;
   public bool isShowingDebug;
