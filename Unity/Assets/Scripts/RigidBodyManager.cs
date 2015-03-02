@@ -150,8 +150,14 @@ public class RigidBodyManager : MonoBehaviour
     // assuming states in correct order
     // assuming timesteps approximately equal
     // assuming order with 0..n being most recent to least recent
-    foreach (DeftRigidBodyState state in states)
+    while (states[0].timestamp < Time.time)
     {
+	    d1 = states[0].timestamp - states[1].timestamp;
+    	d2 = states[1].timestamp - states[2].timestamp;
+    	update = new DeftRigidBodyState ();
+    	update.pos = 2*d1^2/d2/(d1+d2)*states[3].pos - (2*d1/d2+1)*states[1].pos + (2^d1/(d1+d2)+1)*states[0].pos;
+    	update.timestamp = states[0].timestamp + d1;
+    	states.push(update);
     }
   }
 
