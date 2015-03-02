@@ -5,11 +5,11 @@ public enum SyncHandler { snap, simplesmoothing, firstorder, secondorder, adapti
 
 public struct DeftRigidBodyState
 {
-  double timestamp;
-  Vector3 pos;
-  Vector3 velocity;
-  Quaternion rot;
-  Vector3 angularVelocity;
+  public double timestamp;
+  public Vector3 pos;
+  public Vector3 velocity;
+  public Quaternion rot;
+  public Vector3 angularVelocity;
 }
 
 public class RigidBodyManager : MonoBehaviour
@@ -18,19 +18,24 @@ public class RigidBodyManager : MonoBehaviour
   public Queue<GameObject> objectsToSync;
   public Dictionary<GameObject, DeftRigidBodyState> objecToState;
   public HashSet<GameObject> allTrackedObjects;
-  public Dictionary<int, HashSet<GameObject>> objectsInPriority;
 
-  public int layer;
+  // syncs in order of priority
+  // priority suggests how many to sync per syncing set
+  public Dictionary<int, HashSet<GameObject>> objectsByPriority;
+
+  public int trackingLayer;
   public bool isShowingDebug;
   public bool isShowingLatency;
-  public bool isColoringPerSync;
-  public bool isColoringByPlayerProximity;
-  public bool syncThroughManager;
+
+  public int playerPriority; // between 1 and 10
+  // indicates number of player prioritised items to sync
+  // before queue is rebuilt
+
   public SyncHandler syncHandler;
 
   public bool prioritizeByPlayerDistance;
   public float playerPriorityProximity;
-  public float playerDontSyncProximity; // YOU NEED THIS FOR PROPER RIGIDBODY FUNCTION
+  public float playerDontSyncProximity;
 
   public float timeBetweenSyncHighPriority = 0.1f;
   public float timeBetweenSyncLowPriority = 1.0f;
@@ -39,31 +44,33 @@ public class RigidBodyManager : MonoBehaviour
   float timeLastHighPrioritySync;
   float timeLastLowPrioritySync;
   float timeLastAllSynced;
-  public Color syncedRoundColor;
-  public Color prioritizedColor = Color.yellow;
+
+  public bool useVisualizer;
 
 
   void Start()
   {
-    objectsToSync = new HashSet<GameObject>();
+    objectsToSync = new Queue<GameObject>();
     allTrackedObjects = new HashSet<GameObject>();
-    objectsToPrioritySync = new HashSet<GameObject>();
+    objectsByPriority = new Dictionary<int, HashSet<GameObject>>();
+    for (int i = 1; i < 11; i++)
+    {
+      objectsByPriority[i] = new HashSet<GameObject>();
+    }
   }
 
   public void ResetTrackedObjects()
   {
-    objectsToSync.Clear();
     allTrackedObjects.Clear();
-    objectsToPrioritySync.Clear();
+    for (int i = 1; i < 11; i++)
+    {
+      objectsByPriority[i] = new HashSet<GameObject>();
+    }
     foreach (GameObject obj in FindObjectsOfType<GameObject>())
     {
-      if (obj.layer == layer)
+      if (obj.layer == trackingLayer)
       {
         allTrackedObjects.Add(obj);
-        if (isColoringPerSync)
-        {
-          obj.renderer.material.color = Color.green;
-        }
       }
     }
     if (isShowingDebug)
@@ -124,10 +131,6 @@ public class RigidBodyManager : MonoBehaviour
         //SecondOrderSync(obj);
         break;
     }
-    if (isColoringPerSync)
-    {
-      obj.renderer.material.color = syncedRoundColor;
-    }
   }
 
   void SnapSync(GameObject obj)
@@ -151,6 +154,10 @@ public class RigidBodyManager : MonoBehaviour
     // assuming states in correct order
     // assuming timesteps approximately equal
     // assuming order with 0..n being most recent to least recent
+
+    // direct from a paper
+    // maybe not be best but don't mess with this please
+    // -- calben
     while (states[0].timestamp < Time.time)
     {
       float d1 = (float)(states[0].timestamp - states[1].timestamp);
@@ -172,23 +179,25 @@ public class RigidBodyManager : MonoBehaviour
 
   void SetPlayerPriorityObjects()
   {
-    objectsToPrioritySync.Clear();
     foreach (GameObject player in GameObject.FindGameObjectsWithTag("Player"))
     {
       Vector3 player_position = player.transform.position;
       foreach (GameObject tracked in objectsToSync)
       {
-        if (Vector3.Distance(player_position, tracked.transform.position) < this.playerPriorityProximity)
+        double distance = Vector3.Distance(player_position, tracked.transform.position);
+        // this strcture can reduce passes
+        // preferably don't modify this
+        if (distance < this.playerDontSyncProximity)
         {
-          objectsToSync.Remove(tracked);
+          continue;
         }
-        else if (Vector3.Distance(player_position, tracked.transform.position) < this.playerPriorityProximity)
+        else if (distance < this.playerPriorityProximity)
         {
-          objectsToPrioritySync.Add(tracked);
+          objectsByPriority[this.playerPriority].Add(tracked);
         }
         else
         {
-          objectsToSync.Add(tracked);
+          continue;
         }
       }
     }
@@ -203,69 +212,52 @@ public class RigidBodyManager : MonoBehaviour
     if (prioritizeByPlayerDistance)
     {
       SetPlayerPriorityObjects();
-      if (isColoringByPlayerProximity)
-      {
-        foreach (GameObject prioritised in this.objectsToPrioritySync)
-        {
-          prioritised.renderer.material.color = this.prioritizedColor;
-        }
-      }
-    }
-    if (!syncThroughManager)
-    {
-
     }
   }
 
   void OnSerializeNetworkView(BitStream stream, NetworkMessageInfo info)
   {
-    if (syncThroughManager)
+    if(this.useVisualizer)
     {
-      if (isColoringPerSync)
-      {
-        syncedRoundColor = new Color(Random.value, Random.value, Random.value, 1.0f);
-      }
-      if (isShowingDebug)
-      {
-        Debug.Log("Last low priority sync time: " + timeLastLowPrioritySync);
-        Debug.Log("Current time: " + Time.time);
-      }
+      // note using the visualizer will probably hugely slow down your simulation
+      this.gameObject.GetComponent<RigidBodyManagerVisualizer>().ShowVisualization();
+    }
+    if (isShowingDebug)
+    {
+      Debug.Log("Last low priority sync time: " + timeLastLowPrioritySync);
+      Debug.Log("Current time: " + Time.time);
+    }
 
-      if (Time.time - timeLastLowPrioritySync > timeBetweenSyncHighPriority)
+    if (Time.time - timeLastLowPrioritySync > timeBetweenSyncHighPriority)
+    {
+      Debug.Log("Syncing set.");
+      timeLastHighPrioritySync = Time.time;
+      foreach (GameObject obj in objectsToSync)
       {
-        Debug.Log("Syncing set.");
-        timeLastHighPrioritySync = Time.time;
-        foreach (GameObject obj in objectsToSync)
         {
+          Debug.Log("Syncing movement data for " + obj.name);
+          if (stream.isWriting)
           {
-            Debug.Log("Syncing movement data for " + obj.name);
-            if (stream.isWriting)
-            {
-              pos = obj.rigidbody.position;
-              rot = obj.rigidbody.rotation;
-              velocity = obj.rigidbody.velocity;
-              angular_velocity = obj.rigidbody.angularVelocity;
+            pos = obj.rigidbody.position;
+            rot = obj.rigidbody.rotation;
+            velocity = obj.rigidbody.velocity;
+            angular_velocity = obj.rigidbody.angularVelocity;
 
-              stream.Serialize(ref pos);
-              stream.Serialize(ref velocity);
-              stream.Serialize(ref rot);
-              stream.Serialize(ref angular_velocity);
-            }
-            else
-            {
-              stream.Serialize(ref pos);
-              stream.Serialize(ref velocity);
-              stream.Serialize(ref rot);
-              stream.Serialize(ref angular_velocity);
-              SyncObject(obj);
-            }
+            stream.Serialize(ref pos);
+            stream.Serialize(ref velocity);
+            stream.Serialize(ref rot);
+            stream.Serialize(ref angular_velocity);
+          }
+          else
+          {
+            stream.Serialize(ref pos);
+            stream.Serialize(ref velocity);
+            stream.Serialize(ref rot);
+            stream.Serialize(ref angular_velocity);
+            SyncObject(obj);
           }
         }
       }
-    }
-    else
-    {
-
     }
   }
 }
